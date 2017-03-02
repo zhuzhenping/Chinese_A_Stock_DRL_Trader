@@ -106,7 +106,7 @@ class Reinforcer:
                     self.stock_value = self.stock_quantity * self.current_stock_price
                     self.total = self.stock_value + self.fund
                     self.current_data = init_data
-                    self.current_state = self.du.preprocess_state(init_data, self.stock_quantity, self.stock_value, self.fund, self.total)
+                    self.current_state = self.du.preprocess_state(init_data, 0, self.stock_quantity, self.stock_value, self.fund, self.total)
                 else:
                     print "market closed or stock halts"
                     sys.exit(0)
@@ -149,9 +149,6 @@ class Reinforcer:
                 startind = random.randint(0,len(self.memories)-self.config.BATCH_SIZE)
                 batch = self.memories[startind:startind+self.config.BATCH_SIZE]
                 feed = self.build_feed_dict(batch)
-
-
-
 
 
 
