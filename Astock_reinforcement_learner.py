@@ -10,7 +10,7 @@ from data_util import DataUtil
 from config import ASingleStockConfig
 import time
 import sys
-
+from copy import copy
 class Reinforcer:
     def __init__(self):
         self.config = Config()
@@ -23,13 +23,13 @@ class Reinforcer:
         self.b2 = tf.get_variable('b2', [self.config.M2])
         self.W3 = tf.get_variable('W3', [self.config.M2, 1])
         self.b3 = tf.get_variable('b3', [1])
-        self.fund = 500000
-        self.stock_quantity = 10000
-        self.stock_value = 0
-        self.current_stock_price = 0
-        self.total = -1
+
+
         self.current_data = []
         self.current_state = []
+
+        self.portfolio = {'fund':500000, 'stock_quantity':10000, 'current_stock_price':0, 'total': -1, 'stock_value':0}
+
         # self.init_op = tf.initialize_all_variables()
         self.init_placeholder()
         scores = self.batch_scoring_op()
@@ -41,7 +41,7 @@ class Reinforcer:
         self.init_op = tf.initialize_all_variables()
 
     def init_placeholder(self):
-        self.states = tf.placeholder(tf.float32)
+        self.states_after_actions = tf.placeholder(tf.float32)
         self.rewards = tf.placeholder(tf.float32)
         self.states_next = tf.placeholder(tf.float32)
 
@@ -86,6 +86,35 @@ class Reinforcer:
 
         return feed
 
+    def action_policy(self, buy_quantity, stock_price, fund, stock_quantity):
+        if buy_quantity > 0:
+            if buy_quantity * stock_price > fund:
+                quantity_max = fund / stock_price
+                for action in self.actions[::-1]:
+                    if action <= quantity_max:
+                        buy_quantity = action
+            return buy_quantity
+        elif buy_quantity < 0:
+            if buy_quantity > stock_quantity:
+                for action in self.actions:
+                    if -action < stock_quantity:
+                        buy_quantity = action
+            return buy_quantity
+        else:
+            return 0
+
+    def update_portfolio(self, portfolio, action):
+        port = copy(portfolio)
+        if action == 0:
+            return port
+        else:
+            port['fund'] -= port['current_stock_price'] * action
+            port['stock_quantity'] += action
+            port['stock_value'] += port['current_stock_price'] * action
+            return port
+
+
+
     def run_epoch(self, session, save=None, load=None):
         if not os.path.exists('./save'):
             os.makedirs('./save')
@@ -97,16 +126,15 @@ class Reinforcer:
 
 
         while True:
-            if self.total == -1:
+            if self.portfolio['total'] != -1:
                 init_data = self.sc.request_api()
-
                 if init_data[self.config.open_price_ind]:
                     assert init_data[self.config.open_price_ind] == init_data[self.config.current_ind]
-                    self.current_stock_price = init_data[self.config.current_ind]
-                    self.stock_value = self.stock_quantity * self.current_stock_price
-                    self.total = self.stock_value + self.fund
+                    self.portfolio['current_stock_price'] = init_data[self.config.current_ind]
+                    self.portfolio['stock_value'] = self.portfolio['stock_quantity'] * self.portfolio['current_stock_price']
+                    self.portfolio['total'] = self.portfolio['stock_value'] + self.portfolio['fund']
                     self.current_data = init_data
-                    self.current_state = self.du.preprocess_state(init_data, 0, self.stock_quantity, self.stock_value, self.fund, self.total)
+                    self.current_state = self.du.preprocess_state(init_data, self.portfolio['stock_quantity'], self.portfolio['stock_value'], self.portfolio['total'])
                 else:
                     print "market closed or stock halts"
                     sys.exit(0)
@@ -114,36 +142,38 @@ class Reinforcer:
 
             # else:
             #     data, rate = self.sc.request_api()
-            #     self.current_stock_price = data[self.config.current_ind]
+            #     self.portfolio['current_stock_price'] = data[self.config.current_ind]
 
             is_exploration = random.random()
-            assert self.current_stock_price != 0
+            assert self.portfolio['current_stock_price'] != 0
             if is_exploration <= self.config.EPSILON:
                 buy_quantity = random.choice(self.actions)
 
             else:
-                buy_quantity = sess.run(self.prediction, feed_dict={self.states_next: })
+                cadidates = []
+                for action in self.actions:
+                    action = self.action_policy(action, self.portfolio['current_stock_price'], self.portfolio['fund'], self.portfolio['stock_quantity'])
 
+                buy_quantity = sess.run(self.prediction, feed_dict={self.states_after_actions: candidates})
 
-            if buy_quantity >= 0:
-                if buy_quantity * self.current_stock_price > self.fund:
-                    buy_quantity = self.fund / self.current_stock_price
-                self.stock_quantity += buy_quantity
-                self.fund -= buy_quantity * self.current_stock_price
-                assert (self.current_stock_price * self.stock_quantity + self.fund) == self.total
+            '''TODO'''
+            buy_quantity = 1
+            self.portfolio['stock_quantity'] += buy_quantity
+            self.portfolio['fund'] -= buy_quantity * self.portfolio['current_stock_price']
+            assert (self.portfolio['current_stock_price'] * self.portfolio['stock_quantity'] + self.portfolio['fund']) == self.portfolio['total']
 
             time.sleep(self.sc.config.time_interval)
             new_data = self.sc.request_api()
             new_price = new_data[self.config.current_ind]
-            new_total = self.stock_quantity * new_price + self.fund
-            new_state = self.du.preprocess_state(new_data, self.stock_quantity, self.stock_value, self.total)
-            reward = 100.0 * (new_total - self.total) / self.total
+            new_total = self.portfolio['stock_quantity'] * new_price + self.portfolio['fund']
+            new_state = self.du.preprocess_state(new_data, self.portfolio['stock_quantity'], self.portfolio['stock_value'], self.portfolio['total'])
+            reward = 100.0 * (new_total - self.portfolio['total']) / self.portfolio['total']
 
             self.memories.append((self.current_state, buy_quantity, reward, new_state))
             self.current_state = new_state
             self.current_data = new_data
-            self.current_stock_price = new_price
-            self.total = new_total
+            self.portfolio['current_stock_price'] = new_price
+            self.portfolio['total'] = new_total
 
             if len(self.memories) > 10*self.config.BATCH_SIZE:
                 startind = random.randint(0,len(self.memories)-self.config.BATCH_SIZE)
