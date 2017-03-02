@@ -20,6 +20,7 @@ class StockScraper:
         self.url = self.url_base + self.stock_type + self.code
         self.open_price = 0
         self.yesterday_closing_price = 0
+
         with open(self.config.outfile, 'a') as f:
             fl = '#'+str(self.open_price)+' '+str(self.yesterday_closing_price)
             f.write(fl+'\n')
@@ -49,7 +50,7 @@ class StockScraper:
         self.append_to_file(features, reward)
         self.print_content(features, reward)
         data = np.array(features)
-        return data, reward
+        return data
 
     def append_to_file(self, data, reward):
         with open(self.config.outfile, 'a') as f:
@@ -64,7 +65,7 @@ class StockScraper:
         content = (raw_content.read().split(','))
         data, reward = self.parse_content(content)
         data = np.array(data)
-        return data, reward
+        return data
 
     def parse_content(self, content):
         open_price = float(content[1])
@@ -85,8 +86,9 @@ class StockScraper:
             prev_rate = 0
 
         features = [open_price, yesterday_closing_price, current, today_highest, today_lowest, highest_buy_bid, highest_sell_bid, trade_quantity,
-                    prev_rate]
-        return features, rate
+                    prev_rate, rate]
+
+        return features
 
 
 def main():

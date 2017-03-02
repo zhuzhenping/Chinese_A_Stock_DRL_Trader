@@ -16,11 +16,19 @@ class Config:
         self.lr = 1e-6
         self.gamma = 0.015
         self.STOCK_AMOUNT = 16
-        self.TRANSACTION_AMOUNT = 0.1
+        # self.TRANSACTION_AMOUNT = 100
         self.BENCHMARK_RETURN_INDEX = 14
         self.DROPOUT = 0.5
         self.INTERVAL = 5
-
+        self.open_price_ind = 0
+        self.yesterday_closing_price_ind = 1
+        self.current_ind = 2
+        self.today_highest_ind = 3
+        self.today_lowest_ind = 4
+        self.highest_buy_bid_ind = 5
+        self.highest_sell_bid_ind = 6
+        self.trade_quantity_ind = 7
+        self.prev_rate_ind = 8
 
 class ASingleStockConfig:
     def __init__(self):
@@ -28,5 +36,5 @@ class ASingleStockConfig:
         self.DROPOUT = 0.5
         self.code = '601766'
         self.type = 'sh'
-        self.time_interval = 1
+        self.time_interval = 2
         self.outfile = '601766_60.txt'
