@@ -86,7 +86,21 @@ class Reinforcer:
 
     def build_feed_dict(self, random_memories):
         feed = {}
-
+        feed[self.states] = [m[0] for m in random_memories]
+        states_next = []
+        feed[self.rewards] = [m[1] for m in random_memories]
+        new_portfolios = [m[-1] for m in random_memories]
+        new_datas = [m[-2] for m in random_memories]
+        assert len(new_datas) == len(new_portfolios)
+        for i in range(len(new_datas)):
+            port = new_portfolios[i]
+            data = new_datas[i]
+            for action in self.actions:
+                action = self.action_policy(action, port)
+                port_to_be_evaluated = self.update_portfolio_after_action(port, action)
+                state_to_be_evaluated = self.du.preprocess_state(data, port_to_be_evaluated)
+                states_next.append(state_to_be_evaluated)
+        feed[self.states_next] = states_next
         return feed
 
     def action_policy(self, buy_quantity, portfolio):
@@ -178,16 +192,20 @@ class Reinforcer:
             '''update my portfolio & get reward'''
             new_portfolio = self.update_portfolio_after_action(self.portfolio, buy_quantity)
             assert (new_portfolio['current_stock_price'] * new_portfolio['stock_quantity'] + new_portfolio['fund']) == new_portfolio['total']
-
+            self.portfolio = new_portfolio
+            self.current_state = self.du.preprocess_state(self.current_data, self.portfolio)
             new_price = new_data[self.config.current_ind]
             new_portfolio = self.update_portfolio_after_fetch_price(new_portfolio, new_price)
             assert (new_portfolio['current_stock_price'] * new_portfolio['stock_quantity'] + new_portfolio['fund']) == new_portfolio['total']
 
-            new_state = self.du.preprocess_state(new_data, new_portfolio)
             reward = self.calc_reward(new_portfolio, self.portfolio)
 
-            self.memories.append((self.current_state, buy_quantity, reward, new_state))
-            self.current_state = new_state
+
+            '''now current state is a state where price is old while action has been performed'''
+            '''new_state is a state where price is new and with new portfolio, but has not made furthur action yet'''
+            self.memories.append((self.current_state, reward, new_data, new_portfolio))
+
+            '''update data and portfolio'''
             self.current_data = new_data
             self.portfolio = new_portfolio
 
