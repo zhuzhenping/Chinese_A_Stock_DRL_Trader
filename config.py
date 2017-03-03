@@ -10,7 +10,7 @@ class Config:
         self.MAXSTEP = 100
         self.MAXTIMESTEP = 200
         self.START_TIMESTEP = 50
-        self.INPUT = 13
+        self.INPUT = 21
         self.ACTION_NUM = 5
         self.M1 = 20
         self.M2 = 5

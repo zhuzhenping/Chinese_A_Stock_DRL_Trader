@@ -25,7 +25,7 @@ class StockScraper:
             fl = '#'+str(self.open_price)+' '+str(self.yesterday_closing_price)
             f.write(fl+'\n')
 
-    def print_content(self, features, reward):
+    def print_content(self, features):
         print "代码: "+str(self.code)
         print '开盘价: '+str(features[0])
         print '昨收: '+str(features[1])
@@ -35,6 +35,7 @@ class StockScraper:
         print '买一价: '+str(features[5])
         print '卖一价: '+str(features[6])
         print '交易量: '+str(features[7])
+        reward = features[-1]
         if reward > 0:
             print colored(('涨跌幅: '+str(reward)+'%'), 'red')
         elif reward == 0:
@@ -46,16 +47,15 @@ class StockScraper:
     def request_api(self):
         raw_content = urllib.urlopen(self.url)
         content = (raw_content.read().split(','))
-        features, reward = self.parse_content(content)
-        self.append_to_file(features, reward)
-        self.print_content(features, reward)
-        data = np.array(features)
-        return data
+        features = self.parse_content(content)
+        self.append_to_file(features)
+        self.print_content(features)
+        # data = np.array(features)
+        return features
 
-    def append_to_file(self, data, reward):
+    def append_to_file(self, data):
         with open(self.config.outfile, 'a') as f:
             args = [str(x) for x in data]
-            args.append(reward)
             line = ' '.join(args)
             f.write(line+'\n')
 
@@ -63,8 +63,8 @@ class StockScraper:
         url = self.url_base + stock_type + str(code)
         raw_content = urllib.urlopen(url)
         content = (raw_content.read().split(','))
-        data, reward = self.parse_content(content)
-        data = np.array(data)
+        data = self.parse_content(content)
+        # data = np.array(data)
         return data
 
     def parse_content(self, content):

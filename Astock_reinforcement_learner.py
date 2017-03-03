@@ -43,7 +43,6 @@ class Reinforcer:
         self.init_op = tf.initialize_all_variables()
 
     def init_placeholder(self):
-        self.states_after_actions = tf.placeholder(tf.float32)
         self.states = tf.placeholder(tf.float32)
         self.rewards = tf.placeholder(tf.float32)
         self.states_next = tf.placeholder(tf.float32)
@@ -63,7 +62,7 @@ class Reinforcer:
         self.train_op = optimizer.minimize(self.loss)
 
     def add_step_predict_op(self):
-        x = tf.reshape(self.states_after_actions, (self.config.ACTION_NUM, self.config.INPUT))
+        x = tf.reshape(self.states, (self.config.ACTION_NUM, self.config.INPUT))
         scores = self.Q_network_op(x)
         self.prediction = tf.argmax(tf.reshape(scores, (-1, self.config.ACTION_NUM)), axis=1)[0]
 
@@ -125,11 +124,13 @@ class Reinforcer:
 
     @staticmethod
     def update_portfolio_after_action(portfolio, action):
+        print 'action', action
         port = copy(portfolio)
         if action == 0:
             return port
         else:
-            port['fund'] -= port['current_stock_price'] * action
+            print 'a', port['fund'], 'b', port['current_stock_price'], 'c',action
+            port['fund'] = port['fund'] - port['current_stock_price'] * action
             port['stock_quantity'] += action
             port['stock_value'] += port['current_stock_price'] * action
             return port
@@ -154,20 +155,21 @@ class Reinforcer:
             session.run(self.init_op)
 
         while True:
-            if self.portfolio['total'] != -1:
+            if self.portfolio['total'] == -1:
                 init_data = self.sc.request_api()
+                print init_data
                 if init_data[self.config.open_price_ind]:
-                    assert init_data[self.config.open_price_ind] == init_data[self.config.current_ind]
+                    # assert init_data[self.config.open_price_ind] == init_data[self.config.current_ind]
                     self.portfolio['current_stock_price'] = init_data[self.config.current_ind]
                     self.portfolio['stock_value'] = self.portfolio['stock_quantity'] * self.portfolio['current_stock_price']
                     self.portfolio['total'] = self.portfolio['stock_value'] + self.portfolio['fund']
                     self.current_data = init_data
                     self.current_state = self.du.preprocess_state(init_data, self.portfolio)
+                    self.config.INPUT = len(self.current_state)
                 else:
                     print "market closed or stock halts"
                     sys.exit(0)
-                self.config.INPUT = len(self.current_state)
-
+                print self.config.INPUT
             is_exploration = random.random()
             assert self.portfolio['current_stock_price'] != 0
             if is_exploration <= self.config.EPSILON:
@@ -181,8 +183,8 @@ class Reinforcer:
                     candidate_portfolio = self.update_portfolio_after_action(self.portfolio, action)
                     candidate_state = self.du.preprocess_state(self.current_data, candidate_portfolio)
                     candidates.append(candidate_state)
-                max_q_ind = sess.run(self.prediction, feed_dict={self.states_after_actions: candidates})
-                buy_quantity = candidates[max_q_ind]
+                max_q_ind = sess.run(self.prediction, feed_dict={self.states: candidates})
+                buy_quantity = self.actions[max_q_ind]
 
             '''TODO'''
 
