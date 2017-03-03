@@ -11,6 +11,7 @@ class Config:
         self.MAXTIMESTEP = 200
         self.START_TIMESTEP = 50
         self.INPUT = 13
+        self.ACTION_NUM = 5
         self.M1 = 20
         self.M2 = 5
         self.lr = 1e-6
@@ -29,6 +30,7 @@ class Config:
         self.highest_sell_bid_ind = 6
         self.trade_quantity_ind = 7
         self.prev_rate_ind = 8
+
 
 class ASingleStockConfig:
     def __init__(self):
