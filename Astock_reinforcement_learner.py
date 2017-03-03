@@ -44,6 +44,7 @@ class Reinforcer:
 
     def init_placeholder(self):
         self.states_after_actions = tf.placeholder(tf.float32)
+        self.states = tf.placeholder(tf.float32)
         self.rewards = tf.placeholder(tf.float32)
         self.states_next = tf.placeholder(tf.float32)
 
@@ -64,7 +65,7 @@ class Reinforcer:
     def add_step_predict_op(self):
         x = tf.reshape(self.states_after_actions, (self.config.ACTION_NUM, self.config.INPUT))
         scores = self.Q_network_op(x)
-        self.prediction = tf.argmax(tf.reshape(scores, (-1, self.config.STOCK_AMOUNT + 1)), axis=1)[0]
+        self.prediction = tf.argmax(tf.reshape(scores, (-1, self.config.ACTION_NUM)), axis=1)[0]
 
     def Q_network_op(self, x):
         fc1 = tf.matmul(x, self.W1) + self.b1
@@ -78,9 +79,9 @@ class Reinforcer:
         return scores
 
     def batch_predict_op(self):
-        x = tf.reshape(self.states_next, (self.config.BATCH_SIZE * (self.config.STOCK_AMOUNT + 1), self.config.INPUT))
+        x = tf.reshape(self.states_next, (self.config.BATCH_SIZE * self.config.ACTION_NUM, self.config.INPUT))
         Q_scores = self.Q_network_op(x)
-        Q_scores = tf.reshape(Q_scores, (self.config.BATCH_SIZE, self.config.STOCK_AMOUNT + 1))
+        Q_scores = tf.reshape(Q_scores, (self.config.BATCH_SIZE, self.config.ACTION_NUM))
         return Q_scores
 
     def build_feed_dict(self, random_memories):
@@ -122,7 +123,7 @@ class Reinforcer:
     def update_portfolio_after_fetch_price(portfolio, new_price):
         port = copy(portfolio)
         port['current_stock_price'] = new_price
-        port['stock_value'] = new_price * port['stock_amount']
+        port['stock_value'] = new_price * port['stock_quantity']
         port['total'] = port['stock_value'] + port['fund']
         return port
 
@@ -195,10 +196,8 @@ class Reinforcer:
                 batch = self.memories[start_ind:start_ind+self.config.BATCH_SIZE]
                 '''batch BS*I'''
                 feed = self.build_feed_dict(batch)
-
-
-
-
+                scores1, scores2, losses, loss, _ = sess.run([self.predict_scores, self.viewing_scores, self.losses, self.loss, self.train_op], feed_dict=feed)
+                print loss
 
 if __name__ == '__main__':
     cc = Reinforcer()
