@@ -11,6 +11,8 @@ from config import ASingleStockConfig
 import time
 import sys
 from copy import copy
+
+
 class Reinforcer:
     def __init__(self):
         self.config = Config()
@@ -185,8 +187,6 @@ class Reinforcer:
                     candidates.append(candidate_state)
                 max_q_ind = sess.run(self.prediction, feed_dict={self.states: candidates})
                 buy_quantity = self.actions[max_q_ind]
-
-            '''TODO'''
 
             '''fetch!!!'''
             time.sleep(self.sc.config.time_interval)
