@@ -145,8 +145,15 @@ class Reinforcer:
         return port
 
     @staticmethod
+    def calc_total_with_different_price(portfolio, price):
+        return portfolio['stock_quantity'] * price + portfolio['fund']
+
+
+    @staticmethod
+    # def calc_reward(new_portfolio, prev_portfolio):
+    #     return 100.0*(new_portfolio['total'] - prev_portfolio['total']) / prev_portfolio['total']
     def calc_reward(new_portfolio, prev_portfolio):
-        return 100.0*(new_portfolio['total'] - prev_portfolio['total']) / prev_portfolio['total']
+        return 100.0*(new_portfolio['total'] - Reinforcer.calc_total_with_different_price(prev_portfolio, new_portfolio['current_stock_price']))/prev_portfolio['total']
 
     def run_epoch(self, session, save=None, load=None):
         if not os.path.exists('./save'):
