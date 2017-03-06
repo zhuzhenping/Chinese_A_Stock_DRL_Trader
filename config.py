@@ -10,10 +10,10 @@ class Config:
         self.MAXSTEP = 100
         self.MAXTIMESTEP = 200
         self.START_TIMESTEP = 50
-        self.INPUT = 21
+        self.INPUT = 26
         self.ACTION_NUM = 5
-        self.M1 = 20
-        self.M2 = 5
+        self.M1 = 50
+        self.M2 = 10
         self.lr = 1e-6
         self.gamma = 0.015
         self.STOCK_AMOUNT = 16

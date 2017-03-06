@@ -32,7 +32,7 @@ class Reinforcer:
         self.current_data = []
         self.current_state = []
 
-        self.portfolio = {'fund':500000, 'stock_quantity':10000, 'current_stock_price':0, 'total': -1, 'stock_value':0}
+        self.portfolio = {'fund':500000, 'stock_quantity':50000, 'current_stock_price':0, 'total': -1, 'stock_value':0}
 
         # self.init_op = tf.initialize_all_variables()
         self.init_placeholder()
@@ -149,12 +149,13 @@ class Reinforcer:
         return portfolio['stock_quantity'] * price + portfolio['fund']
 
     @staticmethod
-    def calc_reward(new_portfolio, prev_portfolio):
-        return 1000.0*(new_portfolio['total'] - prev_portfolio['total']) / prev_portfolio['total']
     # def calc_reward(new_portfolio, prev_portfolio):
-    #     print new_portfolio
-    #     print prev_portfolio
-    #     return 100.0*(new_portfolio['total'] - Reinforcer.calc_total_with_different_price(prev_portfolio, new_portfolio['current_stock_price']))/prev_portfolio['total']
+    #     return 1000.0*(new_portfolio['total'] - prev_portfolio['total']) / prev_portfolio['total']
+    def calc_reward(new_portfolio, prev_portfolio):
+        '''reward compared to hold'''
+        print "new, ", new_portfolio
+        print "prev, ", prev_portfolio
+        return new_portfolio['total'] - Reinforcer.calc_total_with_different_price(prev_portfolio, new_portfolio['current_stock_price'])
 
     def run_epoch(self, session, save=None, load=None):
         if not os.path.exists('./save'):
@@ -200,11 +201,11 @@ class Reinforcer:
             # time.sleep(self.sc.config.time_interval)
             new_data = self.sc.request_api()
             '''update my portfolio & get reward'''
-            print "before", self.portfolio
             port_before_action = copy(self.portfolio)
             new_portfolio = self.update_portfolio_after_action(self.portfolio, buy_quantity)
-            print "here", new_portfolio
-            assert (new_portfolio['current_stock_price'] * new_portfolio['stock_quantity'] + new_portfolio['fund']) == new_portfolio['total']
+            if (new_portfolio['current_stock_price'] * new_portfolio['stock_quantity'] + new_portfolio['fund']) != new_portfolio['total']:
+                print (new_portfolio['current_stock_price'] * new_portfolio['stock_quantity'] + new_portfolio['fund']), new_portfolio['total']
+                print "*&&&*^*^&*^(&*&^%*&^%*&^"
             self.portfolio = new_portfolio
             self.current_state = self.du.preprocess_state(self.current_data, self.portfolio)
             new_price = new_data[self.config.current_ind]

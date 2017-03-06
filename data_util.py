@@ -14,6 +14,7 @@ class DataUtil:
         total = portfolio['total']
         featured_data += self.time_to_vec()
         featured_data += self.stock_portion(stock_value, total)
+
         # featured_data += [self.trade_confidence(buy_quantity, stock_amount)]
         '''TODO'''
         return featured_data
