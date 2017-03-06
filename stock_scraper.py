@@ -49,7 +49,7 @@ class StockScraper:
         content = (raw_content.read().split(','))
         features = self.parse_content(content)
         self.append_to_file(features)
-        self.print_content(features)
+        # self.print_content(features)
         # data = np.array(features)
         return features
 

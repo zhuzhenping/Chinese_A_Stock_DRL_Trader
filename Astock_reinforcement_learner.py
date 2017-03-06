@@ -126,12 +126,12 @@ class Reinforcer:
 
     @staticmethod
     def update_portfolio_after_action(portfolio, action):
-        print 'action', action
+        # print 'action', action
         port = copy(portfolio)
         if action == 0:
             return port
         else:
-            print 'a', port['fund'], 'b', port['current_stock_price'], 'c',action
+            # print 'a', port['fund'], 'b', port['current_stock_price'], 'c',action
             port['fund'] = port['fund'] - port['current_stock_price'] * action
             port['stock_quantity'] += action
             port['stock_value'] += port['current_stock_price'] * action
@@ -148,12 +148,13 @@ class Reinforcer:
     def calc_total_with_different_price(portfolio, price):
         return portfolio['stock_quantity'] * price + portfolio['fund']
 
-
     @staticmethod
-    # def calc_reward(new_portfolio, prev_portfolio):
-    #     return 100.0*(new_portfolio['total'] - prev_portfolio['total']) / prev_portfolio['total']
     def calc_reward(new_portfolio, prev_portfolio):
-        return 100.0*(new_portfolio['total'] - Reinforcer.calc_total_with_different_price(prev_portfolio, new_portfolio['current_stock_price']))/prev_portfolio['total']
+        return 1000.0*(new_portfolio['total'] - prev_portfolio['total']) / prev_portfolio['total']
+    # def calc_reward(new_portfolio, prev_portfolio):
+    #     print new_portfolio
+    #     print prev_portfolio
+    #     return 100.0*(new_portfolio['total'] - Reinforcer.calc_total_with_different_price(prev_portfolio, new_portfolio['current_stock_price']))/prev_portfolio['total']
 
     def run_epoch(self, session, save=None, load=None):
         if not os.path.exists('./save'):
@@ -183,7 +184,7 @@ class Reinforcer:
             assert self.portfolio['current_stock_price'] != 0
             if is_exploration <= self.config.EPSILON:
                 buy_quantity = random.choice(self.actions)
-
+                print "random"
             else:
                 candidates = []
 
@@ -196,10 +197,13 @@ class Reinforcer:
                 buy_quantity = self.actions[max_q_ind]
 
             '''fetch!!!'''
-            time.sleep(self.sc.config.time_interval)
+            # time.sleep(self.sc.config.time_interval)
             new_data = self.sc.request_api()
             '''update my portfolio & get reward'''
+            print "before", self.portfolio
+            port_before_action = copy(self.portfolio)
             new_portfolio = self.update_portfolio_after_action(self.portfolio, buy_quantity)
+            print "here", new_portfolio
             assert (new_portfolio['current_stock_price'] * new_portfolio['stock_quantity'] + new_portfolio['fund']) == new_portfolio['total']
             self.portfolio = new_portfolio
             self.current_state = self.du.preprocess_state(self.current_data, self.portfolio)
@@ -207,8 +211,8 @@ class Reinforcer:
             new_portfolio = self.update_portfolio_after_fetch_price(new_portfolio, new_price)
             assert (new_portfolio['current_stock_price'] * new_portfolio['stock_quantity'] + new_portfolio['fund']) == new_portfolio['total']
 
-            reward = self.calc_reward(new_portfolio, self.portfolio)
-
+            reward = self.calc_reward(new_portfolio, port_before_action)
+            print "################### reward : ", reward, "####################"
 
             '''now current state is a state where price is old while action has been performed'''
             '''new_state is a state where price is new and with new portfolio, but has not made furthur action yet'''
@@ -217,10 +221,15 @@ class Reinforcer:
             '''update data and portfolio'''
             self.current_data = new_data
             self.portfolio = new_portfolio
+            print "action taken: ", buy_quantity
+            print "current portfolio: ", new_portfolio
+            print "total: ", new_portfolio['total']
+            print "histroy: ", len(self.memories)
+            print "wait for next tick ................\n"
 
-            if len(self.memories) > 10*self.config.BATCH_SIZE:
-                start_ind = random.randint(0,len(self.memories)-self.config.BATCH_SIZE)
-                batch = self.memories[start_ind:start_ind+self.config.BATCH_SIZE]
+            if len(self.memories) > 2*self.config.BATCH_SIZE:
+                random.shuffle(self.memories)
+                batch = self.memories[:self.config.BATCH_SIZE]
                 '''batch BS*I'''
                 feed = self.build_feed_dict(batch)
                 scores1, scores2, losses, loss, _ = sess.run([self.predict_scores, self.viewing_scores, self.losses, self.loss, self.train_op], feed_dict=feed)
