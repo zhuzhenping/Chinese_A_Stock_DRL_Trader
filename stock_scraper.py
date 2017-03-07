@@ -21,10 +21,6 @@ class StockScraper:
         self.open_price = 0
         self.yesterday_closing_price = 0
 
-        with open(self.config.outfile, 'a') as f:
-            fl = '#'+str(self.open_price)+' '+str(self.yesterday_closing_price)
-            f.write(fl+'\n')
-
     def print_content(self, features):
         print "代码: "+str(self.code)
         print '开盘价: '+str(features[0])

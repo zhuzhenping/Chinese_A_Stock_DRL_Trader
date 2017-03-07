@@ -18,8 +18,7 @@ class Reinforcer:
         self.config = Config()
         self.du = DataUtil(self.config)
         self.sc = StockScraper(ASingleStockConfig())
-        self.actions = [5000, 1000, 0, -1000, -5000]
-        self.config.ACTION_NUM = len(self.actions)
+        self.config.ACTION_NUM = len(self.config.actions)
         self.memories = []
         self.W1 = tf.get_variable('W1', [self.config.INPUT, self.config.M1])
         self.b1 = tf.get_variable('b1', [self.config.M1])
@@ -70,12 +69,12 @@ class Reinforcer:
 
     def Q_network_op(self, x):
         fc1 = tf.matmul(x, self.W1) + self.b1
-        relu1 = tf.nn.tanh(fc1)
-        relu1 = tf.nn.dropout(relu1, self.config.DROPOUT)
-        fc2 = tf.matmul(relu1, self.W2) + self.b2
-        relu2 = tf.nn.tanh(fc2)
-        relu2 = tf.nn.dropout(relu2, self.config.DROPOUT)
-        scores = tf.matmul(relu2, self.W3) + self.b3
+        tanh1 = tf.nn.tanh(fc1)
+        tanh1 = tf.nn.dropout(tanh1, self.config.DROPOUT)
+        fc2 = tf.matmul(tanh1, self.W2) + self.b2
+        tanh2 = tf.nn.tanh(fc2)
+        tanh2 = tf.nn.dropout(tanh2, self.config.DROPOUT)
+        scores = tf.matmul(tanh2, self.W3) + self.b3
         scores = tf.squeeze(scores)
         return scores
 
@@ -96,9 +95,10 @@ class Reinforcer:
         for i in range(len(new_datas)):
             port = new_portfolios[i]
             data = new_datas[i]
-            for action in self.actions:
+            for action in self.config.actions:
                 action = self.action_policy(action, port)
                 port_to_be_evaluated = self.update_portfolio_after_action(port, action)
+                print "predicting...", port_to_be_evaluated, action
                 state_to_be_evaluated = self.du.preprocess_state(data, port_to_be_evaluated)
                 states_next.append(state_to_be_evaluated)
         feed[self.states_next] = states_next
@@ -111,14 +111,14 @@ class Reinforcer:
         if buy_quantity > 0:
             if buy_quantity * stock_price > fund:
                 quantity_max = fund / stock_price
-                for action in self.actions[::-1]:
+                for action in self.config.actions[::-1]:
                     if action <= quantity_max:
                         buy_quantity = action
             return buy_quantity
         elif buy_quantity < 0:
-            if buy_quantity > stock_quantity:
-                for action in self.actions:
-                    if -action < stock_quantity:
+            if -buy_quantity > stock_quantity:
+                for action in self.config.actions:
+                    if -action <= stock_quantity:
                         buy_quantity = action
             return buy_quantity
         else:
@@ -184,18 +184,18 @@ class Reinforcer:
             is_exploration = random.random()
             assert self.portfolio['current_stock_price'] != 0
             if is_exploration <= self.config.EPSILON:
-                buy_quantity = random.choice(self.actions)
+                buy_quantity = random.choice(self.config.actions)
                 print "random"
             else:
                 candidates = []
 
-                for action in self.actions:
+                for action in self.config.actions:
                     action = self.action_policy(action, self.portfolio)
                     candidate_portfolio = self.update_portfolio_after_action(self.portfolio, action)
                     candidate_state = self.du.preprocess_state(self.current_data, candidate_portfolio)
                     candidates.append(candidate_state)
                 max_q_ind = sess.run(self.prediction, feed_dict={self.states: candidates})
-                buy_quantity = self.actions[max_q_ind]
+                buy_quantity = self.config.actions[max_q_ind]
 
             '''fetch!!!'''
             # time.sleep(self.sc.config.time_interval)

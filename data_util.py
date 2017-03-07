@@ -33,7 +33,7 @@ class DataUtil:
         elif portion <= 1:
             return [portion]+[0,0,0,0,1]
         else:
-            print "sth wrong with stock portion"
+            print "sth wrong with stock portion", portion, stock_value, total
             sys.exit(0)
 
     @staticmethod
